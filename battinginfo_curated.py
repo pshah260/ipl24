@@ -20,6 +20,10 @@ df = df.rename(columns={'runs_x': 'runs', 'fours_x': 'fours', 'sixes_x': 'sixes'
 df2 = pd.read_sql("select * from playerdatacurated;", engine)
 df2.drop(["index"], axis=1, inplace=True)
 
+sch = pd.read_sql("select * from schedule24;", engine)
+sch.drop(["index"], axis=1, inplace=True)
+sch['MatchNumber'] = sch['MatchNumber'].astype(float)
+
 big = df.merge(df2, how='left', left_on='batter', right_on='name')
 
 
@@ -72,5 +76,7 @@ big = big.merge(df2, how='left', left_on='bowler_y', right_on='name')
 
 big.drop(["batting_y", "Price_y", "age_y", "name"], axis=1, inplace=True)
 
+a = pd.merge(big, sch, left_on="matchnumber", right_on='MatchNumber', how='left')
+a.drop(["MatchDay", "Date", "Day", "Time", "Home", "Away"], axis=1, inplace=True)
 
-big.to_sql("battinginfocurated", engine)
+a.to_sql("battinginfocurated", engine)

@@ -12,6 +12,13 @@ engine = create_engine("postgresql://postgres:postgres@localhost:5432/cricket")
 df = pd.read_sql("select * from masterbowlingdf;", engine)
 df.drop(["index"], axis=1, inplace=True)
 
+sch = pd.read_sql("select * from schedule24;", engine)
+sch.drop(["index"], axis=1, inplace=True)
+sch['MatchNumber'] = sch['MatchNumber'].astype(float)
+
+df2 = pd.read_sql("select * from playerdatacurated;", engine)
+df2.drop(["index"], axis=1, inplace=True)
+
 
 
 def g(x):
@@ -53,5 +60,14 @@ df['ep'] = df.apply(g,axis=1)
 df['wp'] = df.apply(h,axis=1)
 df['botp'] = 25*df['wickets'] + df['ep'] + df['wp'] + 20*df['maiden'] + 2*df['dots']
 
+big = df.merge(df2, how='left', left_on='bowler', right_on='name')
+big.drop(["batting", "name", "age"], axis=1, inplace=True)
 
-df.to_sql("bowlinginfocurated", engine)
+
+d = pd.merge(big, sch, left_on="matchnumber", right_on='MatchNumber', how='left')
+d.drop(["MatchDay", "Date", "Day", "Time", "Home", "Away"], axis=1, inplace=True)
+
+
+
+
+d.to_sql("bowlinginfocurated", engine)
