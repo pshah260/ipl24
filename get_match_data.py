@@ -118,6 +118,7 @@ for match in range(start_match_number-1, end_match_number):
     df['battingorder'] = df.index + 1
 
     battingdf = pd.concat([battinginfo, df], ignore_index=True)
+    battingdf["matchnumber"] = match + 1
 
     # bowling first innings
 
@@ -173,6 +174,7 @@ for match in range(start_match_number-1, end_match_number):
     df = df.reset_index(drop=True)
 
     bowlingdf = pd.concat([bowlingdf, df], ignore_index=True)
+    bowlingdf["matchnumber"] = match + 1
 
     masterbattingdf = pd.concat([masterbattingdf, battingdf], ignore_index=True)
     masterbowlingdf = pd.concat([masterbowlingdf, bowlingdf], ignore_index=True)
