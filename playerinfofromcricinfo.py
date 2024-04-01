@@ -30,11 +30,12 @@ RR = "https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/raj
 RCB = "https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/royal-challengers-bangalore-squad-1413548/series-squads"
 SRH = "https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/sunrisers-hyderabad-squad-1413569/series-squads"
 
-squads = [CSK, DC, GT, KKR, LSG, MI, PBKS, RR, RCB, SRH]
+squads = ["CSK", "DC", "GT", "KKR", "LSG", "MI", "PBKS", "RR", "RCB", "SRH"]
 playerdf = pd.DataFrame()
 
 for team in squads:
-    browser.get(team)
+    teamname = globals().get(team)
+    browser.get(teamname)
 
     html = browser.page_source
     soup = BeautifulSoup(html, 'html.parser')
@@ -82,7 +83,7 @@ for team in squads:
         'batting': batting_styles,
         'bowling': bowling_styles
     })
-
+    df["team"] = team
     playerdf = pd.concat([playerdf, df], ignore_index=True)
 
 playerdf.to_sql("playersinsquad", engine)

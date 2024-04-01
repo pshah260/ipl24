@@ -9,9 +9,14 @@ from pandas.io import sql
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC, wait
+from fuzzywuzzy import fuzz, process
+
 from bs4 import BeautifulSoup
+import re
+
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', None)
+
 
 engine = create_engine("postgresql://postgres:postgres@localhost:5432/cricket")
 
@@ -32,6 +37,24 @@ div = soup.find('div', class_='ds-mb-4')
 links = div.findAll("a")
 
 matchlinks = []
+
+
+def g(x):
+    runout = r'run out'
+    notout = r'not out'
+    bname = r' b (.*)'
+    if re.search(runout, x['wkt']):
+        return ""
+    elif re.search(notout, x['wkt']):
+        return ""
+    else:
+        return re.search(bname, x['wkt']).group(1)
+
+
+def find_best_match(name, names_to_match, threshold=50):
+    best_match = process.extractOne(name, names_to_match, scorer=fuzz.token_sort_ratio, score_cutoff=threshold)
+    return best_match[0] if best_match is not None else None
+
 
 for link in links:
     href = link.get('href')
@@ -85,8 +108,8 @@ for match in range(start_match_number-1, end_match_number):
     df["innings"] = 1
     df = df.reset_index(drop=True)
     df['battingorder'] = df.index + 1
-
-    battinginfo = df
+    df["bowler"] = df.apply(g, axis=1)
+    battinginfo_1 = df
 
     #batting second inning
 
@@ -116,9 +139,9 @@ for match in range(start_match_number-1, end_match_number):
     df["innings"] = 2
     df = df.reset_index(drop=True)
     df['battingorder'] = df.index + 1
+    df["bowler"] = df.apply(g, axis=1)
+    battinginfo_2 = df
 
-    battingdf = pd.concat([battinginfo, df], ignore_index=True)
-    battingdf["matchnumber"] = match + 1
 
     # bowling first innings
 
@@ -144,7 +167,7 @@ for match in range(start_match_number-1, end_match_number):
     df['bowler'] = df['bowler'].str.strip()
     df["innings"] = 1
     df = df.reset_index(drop=True)
-    bowlingdf = df
+    bowlingdf_1 = df
 
     # bowling second inngs
 
@@ -172,11 +195,25 @@ for match in range(start_match_number-1, end_match_number):
 
     df["innings"] = 2
     df = df.reset_index(drop=True)
+    bowlingdf_2 = df
 
-    bowlingdf = pd.concat([bowlingdf, df], ignore_index=True)
+    battinginfo_1['Matched_Name'] = battinginfo_1['bowler'].apply(lambda x: find_best_match(x, bowlingdf_1['bowler']))
+    batting_merge_df_1 = battinginfo_1.merge(bowlingdf_1, how='left', left_on='Matched_Name', right_on='bowler')
+
+    battinginfo_2['Matched_Name'] = battinginfo_2['bowler'].apply(lambda x: find_best_match(x, bowlingdf_2['bowler']))
+    batting_merge_df_2 = battinginfo_2.merge(bowlingdf_2, how='left', left_on='Matched_Name', right_on='bowler')
+
+    battingdf = pd.concat([batting_merge_df_1, batting_merge_df_2], ignore_index=True)
+    battingdf["matchnumber"] = match + 1
+    bowlingdf = pd.concat([bowlingdf_1, bowlingdf_2], ignore_index=True)
     bowlingdf["matchnumber"] = match + 1
 
+
+
     masterbattingdf = pd.concat([masterbattingdf, battingdf], ignore_index=True)
+    masterbattingdf.drop(["overs", "maiden", "wickets", "economy", "dots", "fours_y", "sixes_y", "wides", "noball", "innings_y", "bowler_x", "Matched_Name", "runs_y"], axis=1, inplace=True)
+
+
     masterbowlingdf = pd.concat([masterbowlingdf, bowlingdf], ignore_index=True)
 
 
